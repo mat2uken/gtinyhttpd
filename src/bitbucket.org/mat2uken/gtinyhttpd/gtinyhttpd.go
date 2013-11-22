@@ -10,6 +10,7 @@ import "os/exec"
 import "io/ioutil"
 import "bufio"
 import "strings"
+import "runtime"
 
 const (
 	//	HostFilePath = "/Users/ku/Desktop/gtinyhttpd/hosts"
@@ -71,9 +72,12 @@ func main() {
 			panic(err)
 		}
 
-		// delete DNS Cache
-		if err := exec.Command("/usr/bin/dscacheutil", "-flushcache").Run(); err != nil {
-			log.Fatal(err)
+		// delete DNS
+		switch runtime.GOOS {
+		case "darwin":
+			if err := exec.Command("/usr/bin/dscacheutil", "-flushcache").Run(); err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		os.Exit(0)
