@@ -43,15 +43,20 @@ func main() {
 		r := bufio.NewScanner(f)
 		for r.Scan() {
 			line := r.Text()
+
+			// skip: comment out line
 			if strings.Index(line, "#") == 0 {
 				lines = append(lines, line)
 				continue
 			}
+
+			// split by whitespaces
 			entry := strings.Fields(line)
 			if entry[0] != "127.0.0.1" {
 				lines = append(lines, line)
 				continue
 			}
+
 			if *add_hosts != "" {
 				line = strings.Join(append(entry, *add_hosts), " ")
 			}
@@ -72,7 +77,7 @@ func main() {
 			panic(err)
 		}
 
-		// delete DNS
+		// clear DNS Cache by OS layer if exists
 		switch runtime.GOOS {
 		case "darwin":
 			if err := exec.Command("/usr/bin/dscacheutil", "-flushcache").Run(); err != nil {
