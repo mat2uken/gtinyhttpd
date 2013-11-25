@@ -155,7 +155,8 @@ func main() {
 
 		log.Printf("Start Serving HTTPS => directory: %s, https_port: %d", apath, *https_port)
 		go func() {
-			if err := http.ListenAndServeTLS(fmt.Sprintf(":%d", *https_port), *ssl_cert_file_path, *ssl_key_file_path, nil); err != nil {
+			if err := http.ListenAndServeTLS(fmt.Sprintf(":%d", *https_port),
+				*ssl_cert_file_path, *ssl_key_file_path, nil); err != nil {
 				log.Fatalf("cannot listen https: port=>%d", *https_port)
 				RemoveLocalHostNameFromHostsFile(*ssl_hostname)
 				return
@@ -167,7 +168,7 @@ func main() {
 			signal.Notify(c, os.Interrupt)
 			s := <-c
 			RemoveLocalHostNameFromHostsFile(*ssl_hostname)
-			log.Printf("Remove hosts file entry: ssl_hostname => %v", *ssl_hostname)
+			log.Printf("Removed hosts file entry: ssl_hostname => %v", *ssl_hostname)
 
 			log.Printf("Exiting with %v", s)
 			os.Exit(0)
@@ -187,11 +188,11 @@ func main() {
 			log.Printf("Added hosts file entry: ssl_hostname => %v", *ssl_hostname)
 		case "r":
 			RemoveLocalHostNameFromHostsFile(*ssl_hostname)
-			log.Printf("Remove hosts file entry: ssl_hostname => %v", *ssl_hostname)
+			log.Printf("Removed hosts file entry: ssl_hostname => %v", *ssl_hostname)
 		case "q":
 			RemoveLocalHostNameFromHostsFile(*ssl_hostname)
-			log.Printf("Remove hosts file entry: ssl_hostname => %v", *ssl_hostname)
-			log.Printf("Exiting...")
+			log.Printf("Removed hosts file entry: ssl_hostname => %v", *ssl_hostname)
+			log.Printf("Exiting by key 'q")
 			os.Exit(0)
 		}
 	}
