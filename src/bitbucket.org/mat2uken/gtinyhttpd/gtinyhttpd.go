@@ -137,6 +137,13 @@ func main() {
 	}()
 
 	if *ssl_cert_file_path != "" && *ssl_key_file_path != "" {
+		uid := os.Getuid()
+		if uid != 0 {
+			log.Printf("Cannot run HTTPS server. You must run as root.")
+			log.Printf("are you root? => uid: %d", uid)
+			os.Exit(1)
+		}
+
 		if *ssl_hostname == "" {
 			log.Fatal("You must specify hostname to enable ssl certificate.")
 			os.Exit(1)
@@ -154,18 +161,18 @@ func main() {
 				return
 			}
 		}()
+
+		go func() {
+			c := make(chan os.Signal)
+			signal.Notify(c, os.Interrupt)
+			s := <-c
+			RemoveLocalHostNameFromHostsFile(*ssl_hostname)
+			log.Printf("Remove hosts file entry: ssl_hostname => %v", *ssl_hostname)
+
+			log.Printf("Exiting with %v", s)
+			os.Exit(0)
+		}()
 	}
-
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, os.Interrupt)
-		s := <-c
-		RemoveLocalHostNameFromHostsFile(*ssl_hostname)
-		log.Printf("Remove hosts file entry: ssl_hostname => %v", *ssl_hostname)
-
-		log.Printf("Exiting with %v", s)
-		os.Exit(0)
-	}()
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
