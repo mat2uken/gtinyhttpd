@@ -81,7 +81,12 @@ func main() {
 		switch runtime.GOOS {
 		case "darwin":
 			if err := exec.Command("/usr/bin/dscacheutil", "-flushcache").Run(); err != nil {
-				log.Fatal(err)
+				log.Fatalf("cannnot run command: dscacheutil -flushcache => %v", err)
+			}
+			//			out, oerr := exec.Command("/usr/bin/killall", "-HUP", "mDNSResponder").Output()
+			//			log.Printf("out: %v, err:%v", out, oerr)
+			if err := exec.Command("/usr/bin/killall", "-HUP", "mDNSResponder").Run(); err != nil {
+				log.Fatalf("cannot run command: killall -HUP mDNSResponder => %v", err)
 			}
 		}
 
