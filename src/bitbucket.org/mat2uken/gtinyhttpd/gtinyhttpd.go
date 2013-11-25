@@ -117,8 +117,8 @@ func main() {
 	var add_hostname *string = flag.String("add-hosts", "", "add entry to hosts.")
 	var del_hostname *string = flag.String("del-hosts", "", "del entry to hosts.")
 	var path *string = flag.String("path", ".", "serving files dir path.")
-	var http_port *int = flag.Int("http_port", 8080, "serving port for http.")
-	var https_port *int = flag.Int("https_port", 8443, "serving port for http.")
+	var http_port *int = flag.Int("http-port", 8080, "serving port for http.")
+	var https_port *int = flag.Int("https-port", 8443, "serving port for http.")
 	var ssl_hostname *string = flag.String("ssl-host", "", "https hostname.")
 	var ssl_cert_file_path *string = flag.String("ssl-cert", "", "ssl certificate file(including chain cert).")
 	var ssl_key_file_path *string = flag.String("ssl-key", "", "ssl certificate key file.")
@@ -197,7 +197,6 @@ func main() {
 		if err != nil {
 			break
 		}
-		log.Printf("line: %v", line)
 		switch line[:1] {
 		case "a":
 			AddLocalHostNameToHostsFile(*ssl_hostname)
