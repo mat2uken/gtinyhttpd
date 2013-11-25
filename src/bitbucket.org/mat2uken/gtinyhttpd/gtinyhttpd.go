@@ -91,6 +91,13 @@ func ClearDNSCache() {
 	}
 }
 
+func LoggingHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("access_log: path=>%v", (*r.URL).String())
+		h.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	var add_hostname *string = flag.String("add-hosts", "", "add entry to hosts.")
 	var del_hostname *string = flag.String("del-hosts", "", "del entry to hosts.")
@@ -125,8 +132,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var server = http.StripPrefix("/", http.FileServer(http.Dir(*path)))
-	http.Handle("/", server)
+	fileserver_handler := http.StripPrefix("/", http.FileServer(http.Dir(*path)))
+	http.Handle("/", LoggingHandler(fileserver_handler))
 
 	log.Printf("Start Serving HTTP => directory: %s, http_port: %d", apath, *http_port)
 	go func() {
