@@ -8,6 +8,7 @@ import "fmt"
 import "os"
 import "os/exec"
 import "os/signal"
+import "os/user"
 import "io/ioutil"
 import "bufio"
 import "strings"
@@ -98,6 +99,20 @@ func LoggingHandler(h http.Handler) http.Handler {
 	})
 }
 
+func ToAbsPath(path string) string {
+	if len(path) >= 1 && path[:1] == "~" {
+		usr, _ := user.Current()
+		home_dir := usr.HomeDir
+		path = strings.Replace(path, "~/", "", 1)
+		path = filepath.Join(home_dir, path)
+	}
+	apath, err := filepath.Abs(path)
+	if err != nil {
+		panic(err)
+	}
+	return apath
+}
+
 func main() {
 	var add_hostname *string = flag.String("add-hosts", "", "add entry to hosts.")
 	var del_hostname *string = flag.String("del-hosts", "", "del entry to hosts.")
@@ -115,27 +130,21 @@ func main() {
 			log.Printf("are you root? => uid: %d", uid)
 			os.Exit(1)
 		}
-
 		if *add_hostname != "" {
 			AddLocalHostNameToHostsFile(*add_hostname)
 		}
 		if *del_hostname != "" {
 			RemoveLocalHostNameFromHostsFile(*del_hostname)
 		}
-
 		ClearDNSCache()
-
 		os.Exit(0)
 	}
 
-	apath, err := filepath.Abs(*path)
-	if err != nil {
-		panic(err)
-	}
-	fileserver_handler := http.StripPrefix("/", http.FileServer(http.Dir(*path)))
+	files_path := ToAbsPath(*path)
+	fileserver_handler := http.StripPrefix("/", http.FileServer(http.Dir(files_path)))
 	http.Handle("/", LoggingHandler(fileserver_handler))
 
-	log.Printf("Start Serving HTTP => directory: %s, http_port: %d", apath, *http_port)
+	log.Printf("Start Serving HTTP => directory: %s, http_port: %d", files_path, *http_port)
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", *http_port), nil); err != nil {
 			log.Fatalf("cannot listen http: port=>%d", *http_port)
@@ -160,11 +169,11 @@ func main() {
 		AddLocalHostNameToHostsFile(*ssl_hostname)
 		ClearDNSCache()
 
-		log.Printf("Start Serving HTTPS => directory: %s, https_port: %d", apath, *https_port)
+		log.Printf("Start Serving HTTPS => directory: %s, https_port: %d", files_path, *https_port)
 		go func() {
 			if err := http.ListenAndServeTLS(fmt.Sprintf(":%d", *https_port),
-				*ssl_cert_file_path, *ssl_key_file_path, nil); err != nil {
-				log.Fatalf("cannot listen https: port=>%d", *https_port)
+				ToAbsPath(*ssl_cert_file_path), ToAbsPath(*ssl_key_file_path), nil); err != nil {
+				log.Fatalf("cannot listen https: port=>%d, err=>%v", *https_port, err)
 				RemoveLocalHostNameFromHostsFile(*ssl_hostname)
 				return
 			}
@@ -175,7 +184,7 @@ func main() {
 			signal.Notify(c, os.Interrupt)
 			s := <-c
 			RemoveLocalHostNameFromHostsFile(*ssl_hostname)
-			log.Printf("Removed hosts file entry: ssl_hostname => %v", *ssl_hostname)
+			log.Printf("Removed hosts file entry: ssl_hostname=>%v", *ssl_hostname)
 
 			log.Printf("Exiting with %v", s)
 			os.Exit(0)
@@ -199,7 +208,7 @@ func main() {
 		case "q":
 			RemoveLocalHostNameFromHostsFile(*ssl_hostname)
 			log.Printf("Removed hosts file entry: ssl_hostname => %v", *ssl_hostname)
-			log.Printf("Exiting by key 'q")
+			log.Printf("Exiting by key 'q'")
 			os.Exit(0)
 		}
 	}
