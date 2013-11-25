@@ -25,7 +25,11 @@ func main() {
 	var add_hosts *string = flag.String("add-hosts", "", "add entry to hosts.")
 	var del_hosts *string = flag.String("del-hosts", "", "del entry to hosts.")
 	var path *string = flag.String("path", ".", "serving files dir path.")
-	var port *int = flag.Int("port", 8080, "serving port.")
+	var http_port *int = flag.Int("http_port", 8080, "serving port for http.")
+	var https_port *int = flag.Int("https_port", 8443, "serving port for http.")
+	var ssl_hostname *string = flag.String("ssl-host", "", "https hostname.")
+	var ssl_cert_file_path *string = flag.String("ssl-cert", "", "ssl certificate file(including chain cert).")
+	var ssl_key_file_path *string = flag.String("ssl-key", "", "ssl certificate key file.")
 	flag.Parse()
 
 	if *add_hosts != "" || *del_hosts != "" {
@@ -97,11 +101,33 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("Start Serving HTTP => directory: %s, port: %d", apath, *port)
-
 	var server = http.StripPrefix("/", http.FileServer(http.Dir(*path)))
 	http.Handle("/", server)
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil); err != nil {
-		panic(err)
+
+	go func() {
+		log.Printf("Start Serving HTTP => directory: %s, http_port: %d", apath, *http_port)
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", *http_port), nil); err != nil {
+			log.Fatalf("cannot listen http: port=>%d", *http_port)
+			panic(err)
+		}
+	}()
+
+	if *ssl_cert_file_path != "" && *ssl_key_file_path != "" {
+		log.Printf("Start Serving HTTPS => directory: %s, https_port: %d", apath, *https_port)
+		go func() {
+			if err := http.ListenAndServeTLS(fmt.Sprintf(":%d", *https_port), *ssl_cert_file_path, *ssl_key_file_path, nil); err != nil {
+				log.Fatalf("cannot listen https: port=>%d", *https_port)
+				panic(err)
+			}
+		}()
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		log.Printf("input line: %v", line)
 	}
 }
