@@ -1,4 +1,5 @@
 syntax: glob
+bin/gtinyhttpd
 .DS_Store
 ._*
 
