@@ -1,18 +1,20 @@
 package main
 
-import "net/http"
-import "flag"
-import "log"
-import "path/filepath"
-import "fmt"
-import "os"
-import "os/exec"
-import "os/signal"
-import "os/user"
-import "io/ioutil"
-import "bufio"
-import "strings"
-import "runtime"
+import (
+	"bufio"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"os/signal"
+	"os/user"
+	"path/filepath"
+	"runtime"
+	"strings"
+)
 
 const (
 	//	HostFilePath = "/Users/ku/Desktop/gtinyhttpd/hosts"
