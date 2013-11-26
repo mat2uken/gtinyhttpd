@@ -27,7 +27,7 @@ func EditHostsFile(edit_func EditHostFileHandlerFunc) {
 	var lines []string
 	f, err := os.Open(HostFilePath)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Cannot open /etc/hosts file => err: %v", err)
 	}
 	r := bufio.NewScanner(f)
 	for r.Scan() {
@@ -50,7 +50,7 @@ func EditHostsFile(edit_func EditHostFileHandlerFunc) {
 
 	content := []byte(strings.Join(lines, "\n") + "\n")
 	if err := ioutil.WriteFile(HostFilePath, content, 0644); err != nil {
-		panic(err)
+		log.Fatalf("Cannot write /etc/hosts file => err: %v", err)
 	}
 }
 
@@ -94,7 +94,7 @@ func ClearDNSCache() {
 	}
 }
 
-func LoggingHandler(h http.Handler) http.Handler {
+func LoggingFileServerHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("access_log: path=>%v", (*r.URL).String())
 		h.ServeHTTP(w, r)
@@ -110,7 +110,7 @@ func ToAbsPath(path string) string {
 	}
 	apath, err := filepath.Abs(path)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Cannot convert to abspath => path:%v, err:%v", path, err)
 	}
 	return apath
 }
@@ -129,8 +129,7 @@ func main() {
 	if *add_hostname != "" || *del_hostname != "" {
 		uid := os.Getuid()
 		if uid != 0 {
-			log.Printf("are you root? => uid: %d", uid)
-			os.Exit(1)
+			log.Fatalf("are you root? => uid: %d", uid)
 		}
 		if *add_hostname != "" {
 			AddLocalHostNameToHostsFile(*add_hostname)
@@ -144,12 +143,12 @@ func main() {
 
 	files_path := ToAbsPath(*path)
 	fileserver_handler := http.StripPrefix("/", http.FileServer(http.Dir(files_path)))
-	http.Handle("/", LoggingHandler(fileserver_handler))
+	http.Handle("/", LoggingFileServerHandler(fileserver_handler))
 
 	log.Printf("Start Serving HTTP => directory: %s, http_port: %d", files_path, *http_port)
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", *http_port), nil); err != nil {
-			log.Fatalf("cannot listen http: port=>%d", *http_port)
+			log.Fatalf("cannot listen http => port:%d", *http_port)
 			return
 		}
 	}()
@@ -163,19 +162,19 @@ func main() {
 		}
 
 		if *ssl_hostname == "" {
-			log.Fatal("You must specify hostname to enable ssl certificate.")
-			os.Exit(1)
+			log.Fatalf("You must specify hostname to enable ssl certificate.")
 		}
 
-		log.Printf("Adding ssl-hostname to hosts file: hostname=>%v", *ssl_hostname)
+		log.Printf("Adding ssl-hostname to hosts file => hostname: %v", *ssl_hostname)
 		AddLocalHostNameToHostsFile(*ssl_hostname)
 		ClearDNSCache()
 
 		log.Printf("Start Serving HTTPS => directory: %s, https_port: %d", files_path, *https_port)
+		log.Printf("SSL Certs => cert_file: %v, key_file: %v", ToAbsPath(*ssl_cert_file_path), ToAbsPath(*ssl_key_file_path))
 		go func() {
 			if err := http.ListenAndServeTLS(fmt.Sprintf(":%d", *https_port),
 				ToAbsPath(*ssl_cert_file_path), ToAbsPath(*ssl_key_file_path), nil); err != nil {
-				log.Fatalf("cannot listen https: port=>%d, err=>%v", *https_port, err)
+				log.Fatalf("cannot listen https => port:%d, err:%v", *https_port, err)
 				RemoveLocalHostNameFromHostsFile(*ssl_hostname)
 				return
 			}
@@ -186,8 +185,7 @@ func main() {
 			signal.Notify(c, os.Interrupt)
 			s := <-c
 			RemoveLocalHostNameFromHostsFile(*ssl_hostname)
-			log.Printf("Removed hosts file entry: ssl_hostname=>%v", *ssl_hostname)
-
+			log.Printf("Removed hosts file entry => ssl_hostname: %v", *ssl_hostname)
 			log.Printf("Exiting with %v", s)
 			os.Exit(0)
 		}()
@@ -202,13 +200,13 @@ func main() {
 		switch line[:1] {
 		case "a":
 			AddLocalHostNameToHostsFile(*ssl_hostname)
-			log.Printf("Added hosts file entry: ssl_hostname => %v", *ssl_hostname)
+			log.Printf("Added hosts file entry => ssl_hostname: %v", *ssl_hostname)
 		case "r":
 			RemoveLocalHostNameFromHostsFile(*ssl_hostname)
-			log.Printf("Removed hosts file entry: ssl_hostname => %v", *ssl_hostname)
+			log.Printf("Removed hosts file entry => ssl_hostname: %v", *ssl_hostname)
 		case "q":
 			RemoveLocalHostNameFromHostsFile(*ssl_hostname)
-			log.Printf("Removed hosts file entry: ssl_hostname => %v", *ssl_hostname)
+			log.Printf("Removed hosts file entry => ssl_hostname: %v", *ssl_hostname)
 			log.Printf("Exiting by key 'q'")
 			os.Exit(0)
 		}
