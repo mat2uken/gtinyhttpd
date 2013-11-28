@@ -24,28 +24,35 @@ const (
 type EditHostFileHandlerFunc func(entry []string) []string
 
 func EditHostsFile(edit_func EditHostFileHandlerFunc) {
-	var lines []string
 	f, err := os.Open(HostFilePath)
 	if err != nil {
 		log.Fatalf("Cannot open /etc/hosts file => err: %v", err)
 	}
+	var lines []string
 	r := bufio.NewScanner(f)
+LineScanLoop:
 	for r.Scan() {
 		line := r.Text()
 
 		// split by whitespaces
 		entry := strings.Fields(line)
+		log.Println(entry)
 
-		if strings.Index(entry[0], "#") == 0 {
-			lines = append(lines, line)
-			continue
-		}
-		if entry[0] != "127.0.0.1" {
+		if len(entry) == 0 || strings.Index(entry[0], "#") == 0 {
 			lines = append(lines, line)
 			continue
 		}
 
-		lines = append(lines, strings.Join(edit_func(entry), " "))
+		if entry[0] == "127.0.0.1" {
+			for _, v := range entry {
+				if v == "localhost" {
+					lines = append(lines, strings.Join(edit_func(entry), " "))
+					continue LineScanLoop
+				}
+			}
+		}
+
+		lines = append(lines, line)
 	}
 
 	content := []byte(strings.Join(lines, "\n") + "\n")
